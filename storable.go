@@ -152,8 +152,12 @@ func (e *encodeState) marshalValue(value reflect.Value) error {
 
 	typ := value.Type()
 	switch typ.Kind() {
+	case reflect.Interface:
+		err = e.marshalValue(value.Elem())
 	case reflect.Struct:
 		err = e.marshalStruct(value)
+	case reflect.Map:
+		err = e.marshalMap(value)
 	case reflect.Slice, reflect.Array:
 		err = e.marshalSlice(value)
 	case reflect.Bool:
@@ -203,6 +207,42 @@ func (e *encodeState) marshalStruct(value reflect.Value) error {
 		// Write hash key
 		binary.Write(e2, binary.BigEndian, uint32(len(f.Name)))
 		_, err = e2.WriteString(f.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = binary.Write(e, binary.BigEndian, uint32(totalSize))
+	if err != nil {
+		return err
+	}
+
+	_, err = e.Write(e2.Bytes())
+
+	return err
+}
+
+func (e *encodeState) marshalMap(value reflect.Value) error {
+	err := binary.Write(e, binary.BigEndian, uint8(SX_HASH))
+	if err != nil {
+		return err
+	}
+
+	keys := value.MapKeys()
+	totalSize := len(keys)
+
+	e2 := &encodeState{}
+	for _, k := range keys {
+		v := value.MapIndex(k)
+
+		err = e2.marshalValue(v)
+		if err != nil {
+			return err
+		}
+
+		// Write hash key
+		err = binary.Write(e2, binary.BigEndian, uint32(k.Len()))
+		_, err = e2.WriteString(k.String())
 		if err != nil {
 			return err
 		}

@@ -31,9 +31,13 @@ var (
 			Omit string `storable:"omitempty"`
 		}{Name: "Kevin"}, `{'Name' => 'Kevin'}`},
 
+		{map[string]interface{}{"Name": "Kevin"}, `{'Name' => 'Kevin'}`},
+
 		{struct {
 			nested *nested
 		}{&nested{"Kevin"}}, `{'nested' => {'Name' => 'Kevin'}}`},
+
+		{map[string]interface{}{"nested": &nested{"Kevin"}}, `{'nested' => {'Name' => 'Kevin'}}`},
 
 		{"Kevin", `\'Kevin'`},
 		{1234, `\'1234'`},
